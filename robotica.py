@@ -69,24 +69,25 @@ class Parametros(object):
                               [self.r21, self.r22, self.r23, self.r24],
                               [self.r31, self.r32, self.r33, self.r34],
                               [0, 0, 0, 1]])
-        self.ultx = x[0,-1]
-        self.ulty = y[0,-1]
-        self.ultz = z[0,-1]
         try:
             self.mT = frames[-1].mDH * self.mDH
         except IndexError:
             self.mT = np.identity(4) * self.mDH
 
-        x = np.append(x, [[self.ultx, self.mDH[0,3], self.mDH[0,3], self.mDH[0,3]]], axis=1)
-        y = np.append(y, [[self.ulty, self.mDH[1,3], self.mDH[1,3], self.mDH[1,3]]], axis=1)
-        z = np.append(z, [[self.ultz, self.mDH[2,3], self.mDH[2,3], self.mDH[2,3]]], axis=1)
-        u = np.append(u, [[self.mDH[0,3], self.mT[0,0], self.mT[0,1], self.mT[0,2]]], axis=1)
-        v = np.append(v, [[self.mDH[1,3], self.mT[1,0], self.mT[1,1], self.mT[1,2]]], axis=1)
-        w = np.append(w, [[self.mDH[2,3], self.mT[2,0], self.mT[2,1], self.mT[2,2]]], axis=1)
+        x = np.append(x, [[x[0,-1], self.mT[0,3], self.mT[0,3], self.mT[0,3]]], axis=1)
+        y = np.append(y, [[y[0,-1], self.mT[1,3], self.mT[1,3], self.mT[1,3]]], axis=1)
+        z = np.append(z, [[z[0,-1], self.mT[2,3], self.mT[2,3], self.mT[2,3]]], axis=1)
+        #TODO, arrumar u,v,w o a primeira coluna 01T * Posição algo assim
+
+        x[0,:] * y[:,0] algo assim
+        u = np.append(u, [[-----, self.mT[0,0], self.mT[0,1], self.mT[0,2]]], axis=1)
+        v = np.append(v, [[-----, self.mT[1,0], self.mT[1,1], self.mT[1,2]]], axis=1)
+        w = np.append(w, [[-----, self.mT[2,0], self.mT[2,1], self.mT[2,2]]], axis=1)
 
         self.info()
 
     def info(self):
+        pass
         '''
         print('x({}°) y({}°) z({}°)'.format(np.degrees(self.angX), np.degrees(self.angY), np.degrees(self.angZ)))
         print('dx({}), dy({}), dz({})'.format(self.dx, self.dy, self.dz))
@@ -102,16 +103,16 @@ v = np.matrix([0, 1, 0])
 w = np.matrix([0, 0, 1])
 frames = []
 
-escolha = int(input('Descição espacial (0) ou parametros DH(modificados) (1): '))
+escolha = int(input('digite 0 para Descrição espacial ou 1 para parametros DH(modificados): '))
 if escolha == 0:
-    quant = int(input('Quantidade de quadros: '))
+    quant = int(input('Quantidade de Sistemas: '))
     for i in range(1, (quant + 1)):
         print('Sistema {}, insira os dados separados por espaço: '.format(i))
         print('AngX AngY AngZ TransX TransY TransZ bP(x) bP(y) bP(z)')
         frames.append(Descricao(list(map(float, input().split()))))
 
 elif escolha == 1:
-    quant = int(input('Quantidade de quadros: '))
+    quant = int(input('Quantidade de Sistemas: '))
     for i in range(1, (quant + 1)):
         print('Sistema {}, insira os dados separados por espaço: '.format(i))
         print('alpha a d theta')
