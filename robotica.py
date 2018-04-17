@@ -1,19 +1,15 @@
-# Remover linha abaixo se não for executar no Jupyter Notebook
-# %matplotlib notebook
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+# TODO: eixos com cores, etc.
 
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 
-print('Separar valores decimais com ponto')
-print('Sistema para rotação de eixos fixos XYZ, ou euler ZYX')
-
-class Frame(object):
-
+class Descricao(object):
     def __init__(self, dados):
-
         global x, y, z, u, v, w
-
         self.angX, self.angY, self.angZ, self.dx, self.dy, self.dz, self.xB, self.yB, self.zB = dados
         self.angX = np.radians(self.angX)
         self.angY = np.radians(self.angY)
@@ -27,15 +23,12 @@ class Frame(object):
         self.r31 = -(np.sin(self.angY))
         self.r32 = np.cos(self.angY) * np.sin(self.angX)
         self.r33 = np.cos(self.angY) * np.cos(self.angX)
-
         self.rot = np.matrix([[self.r11, self.r12, self.r13],
                               [self.r21, self.r22, self.r23],
                               [self.r31, self.r32, self.r33]])
-
         self.aPborg = np.matrix([[self.dx], [self.dy], [self.dz]])
         self.pB = np.matrix([[self.xB], [self.yB], [self.zB]])
         self.pA = (self.rot * self.pB) + self.aPborg
-
         x = np.append(x, [[self.dx, self.dx, self.dx, self.dx, 0, 0]], axis=1)
         y = np.append(y, [[self.dy, self.dy, self.dy, self.dy, 0, 0]], axis=1)
         z = np.append(z, [[self.dz, self.dz, self.dz, self.dz, 0, 0]], axis=1)
@@ -54,24 +47,82 @@ class Frame(object):
         print('pB: {}'.format(self.pB.T))
         print('pA: {}'.format(self.pA.T))
 
+class Parametros(object):
+    def __init__(self, dados):
+        global x, y, z, u, v, w, frames
+        self.alpha, self.a, self.d, self.theta = dados
+        self.theta = np.radians(self.theta)
+        self.alpha = np.radians(self.alpha)
+        self.r11 = np.cos(self.theta)
+        self.r12 = -(np.sin(self.theta))
+        self.r13 = 0
+        self.r14 = self.a
+        self.r21 = np.sin(self.theta) * np.cos(self.alpha)
+        self.r22 = np.cos(self.theta) * np.cos(self.alpha)
+        self.r23 = -(np.sin(self.alpha))
+        self.r24 = -(self.d * np.sin(self.alpha))
+        self.r31 = np.sin(self.theta) * np.sin(self.alpha)
+        self.r32 = np.cos(self.theta) * np.sin(self.alpha)
+        self.r33 = np.cos(self.alpha)
+        self.r34 = self.d * np.cos(self.alpha)
+        self.mDH = np.matrix([[self.r11, self.r12, self.r13, self.r14],
+                              [self.r21, self.r22, self.r23, self.r24],
+                              [self.r31, self.r32, self.r33, self.r34],
+                              [0, 0, 0, 1]])
+        self.ultx = x[0,-1]
+        self.ulty = y[0,-1]
+        self.ultz = z[0,-1]
+        try:
+            self.mT = frames[-1].mDH * self.mDH
+        except IndexError:
+            self.mT = np.identity(4) * self.mDH
+
+        x = np.append(x, [[self.ultx, self.mDH[0,3], self.mDH[0,3], self.mDH[0,3]]], axis=1)
+        y = np.append(y, [[self.ulty, self.mDH[1,3], self.mDH[1,3], self.mDH[1,3]]], axis=1)
+        z = np.append(z, [[self.ultz, self.mDH[2,3], self.mDH[2,3], self.mDH[2,3]]], axis=1)
+        u = np.append(u, [[self.mDH[0,3], self.mT[0,0], self.mT[0,1], self.mT[0,2]]], axis=1)
+        v = np.append(v, [[self.mDH[1,3], self.mT[1,0], self.mT[1,1], self.mT[1,2]]], axis=1)
+        w = np.append(w, [[self.mDH[2,3], self.mT[2,0], self.mT[2,1], self.mT[2,2]]], axis=1)
+
+        self.info()
+
+    def info(self):
+        '''
+        print('x({}°) y({}°) z({}°)'.format(np.degrees(self.angX), np.degrees(self.angY), np.degrees(self.angZ)))
+        print('dx({}), dy({}), dz({})'.format(self.dx, self.dy, self.dz))
+        print('Matriz de rotação:\n{}\n'.format(self.rot))
+        print('pB: {}'.format(self.pB.T))
+        print('pA: {}'.format(self.pA.T))
+        '''
 x = np.matrix([0, 0, 0])
 y = np.matrix([0, 0, 0])
 z = np.matrix([0, 0, 0])
 u = np.matrix([1, 0, 0])
 v = np.matrix([0, 1, 0])
 w = np.matrix([0, 0, 1])
-
 frames = []
-quant = int(input('quantidade de quadros: '))
 
-for i in range(1, (quant + 1)):
-    print('Sistema{}, insira os dados separados por espaço: '.format(i))
-    print('AngX, AngY, AngZ, Trans. X, Trans. Y, Trans. Z, bP(x), bP(y), bP(z)')
-    frames.append(Frame(list(map(float, input().split()))))
+escolha = int(input('Descição espacial (0) ou parametros DH(modificados) (1): '))
+if escolha == 0:
+    quant = int(input('Quantidade de quadros: '))
+    for i in range(1, (quant + 1)):
+        print('Sistema {}, insira os dados separados por espaço: '.format(i))
+        print('AngX AngY AngZ TransX TransY TransZ bP(x) bP(y) bP(z)')
+        frames.append(Descricao(list(map(float, input().split()))))
+
+elif escolha == 1:
+    quant = int(input('Quantidade de quadros: '))
+    for i in range(1, (quant + 1)):
+        print('Sistema {}, insira os dados separados por espaço: '.format(i))
+        print('alpha a d theta')
+        frames.append(Parametros(list(map(float, input().split()))))
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 ax.quiver(x, y, z, u, v, w, arrow_length_ratio=0.1)
+ax.set_xlim(-5, 5)
+ax.set_ylim(-5, 5)
+ax.set_zlim(-5, 5)
 ax.set_xlabel('eixo x')
 ax.set_ylabel('eixo y')
 ax.set_zlabel('eixo z')
