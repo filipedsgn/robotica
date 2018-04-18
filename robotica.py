@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
 # TODO: eixos com cores, etc.
@@ -43,65 +43,61 @@ class Descricao(object):
     def info(self):
         print('x({}°) y({}°) z({}°)'.format(np.degrees(self.angX), np.degrees(self.angY), np.degrees(self.angZ)))
         print('dx({}), dy({}), dz({})'.format(self.dx, self.dy, self.dz))
-        print('Matriz de rotação:\n{}\n'.format(self.rot))
+        print('Matriz de rotação:\n{}\n'.format(np.around(self.rot, decimals=3)))
         print('pB: {}'.format(self.pB.T))
         print('pA: {}'.format(self.pA.T))
 
 class Parametros(object):
     def __init__(self, dados):
-        global x, y, z, u, v, w, frames
+        global x, y, z, u, v, w, frames2
         self.alpha, self.a, self.d, self.theta = dados
         self.theta = np.radians(self.theta)
         self.alpha = np.radians(self.alpha)
         self.r11 = np.cos(self.theta)
-        self.r12 = -(np.sin(self.theta))
+        self.r12 = -np.sin(self.theta)
         self.r13 = 0
         self.r14 = self.a
         self.r21 = np.sin(self.theta) * np.cos(self.alpha)
         self.r22 = np.cos(self.theta) * np.cos(self.alpha)
-        self.r23 = -(np.sin(self.alpha))
-        self.r24 = -(self.d * np.sin(self.alpha))
+        self.r23 = -np.sin(self.alpha)
+        self.r24 = -np.sin(self.alpha) * self.d
         self.r31 = np.sin(self.theta) * np.sin(self.alpha)
         self.r32 = np.cos(self.theta) * np.sin(self.alpha)
         self.r33 = np.cos(self.alpha)
-        self.r34 = self.d * np.cos(self.alpha)
+        self.r34 = np.cos(self.alpha) * self.d
         self.mDH = np.matrix([[self.r11, self.r12, self.r13, self.r14],
                               [self.r21, self.r22, self.r23, self.r24],
                               [self.r31, self.r32, self.r33, self.r34],
                               [0, 0, 0, 1]])
         try:
-            self.mT = frames[-1].mDH * self.mDH
+            self.mT = frames2[-1].mT * self.mDH
+            self.outro = np.delete((np.delete(frames2[-1].mT,3,1)),3,0) * np.matrix([[self.r14],[self.r24],[self.r34]])
+
         except IndexError:
             self.mT = np.identity(4) * self.mDH
+            self.test = []
+            self.outro = np.matrix([[self.r14],[self.r24],[self.r34]])
 
         x = np.append(x, [[x[0,-1], self.mT[0,3], self.mT[0,3], self.mT[0,3]]], axis=1)
         y = np.append(y, [[y[0,-1], self.mT[1,3], self.mT[1,3], self.mT[1,3]]], axis=1)
         z = np.append(z, [[z[0,-1], self.mT[2,3], self.mT[2,3], self.mT[2,3]]], axis=1)
-        #TODO, arrumar u,v,w o a primeira coluna 01T * Posição algo assim
-
-        x[0,:] * y[:,0] algo assim
-        u = np.append(u, [[-----, self.mT[0,0], self.mT[0,1], self.mT[0,2]]], axis=1)
-        v = np.append(v, [[-----, self.mT[1,0], self.mT[1,1], self.mT[1,2]]], axis=1)
-        w = np.append(w, [[-----, self.mT[2,0], self.mT[2,1], self.mT[2,2]]], axis=1)
+        u = np.append(u, [[self.outro[0,0], self.mT[0,0], self.mT[0,1], self.mT[0,2]]], axis=1)
+        v = np.append(v, [[self.outro[1,0], self.mT[1,0], self.mT[1,1], self.mT[1,2]]], axis=1)
+        w = np.append(w, [[self.outro[2,0], self.mT[2,0], self.mT[2,1], self.mT[2,2]]], axis=1)
 
         self.info()
 
     def info(self):
-        pass
-        '''
-        print('x({}°) y({}°) z({}°)'.format(np.degrees(self.angX), np.degrees(self.angY), np.degrees(self.angZ)))
-        print('dx({}), dy({}), dz({})'.format(self.dx, self.dy, self.dz))
-        print('Matriz de rotação:\n{}\n'.format(self.rot))
-        print('pB: {}'.format(self.pB.T))
-        print('pA: {}'.format(self.pA.T))
-        '''
+        print('DH \n {} \nT \n {}'.format(np.around(self.mDH, decimals=3), np.around(self.mT, decimals=3)))
+
 x = np.matrix([0, 0, 0])
 y = np.matrix([0, 0, 0])
 z = np.matrix([0, 0, 0])
 u = np.matrix([1, 0, 0])
 v = np.matrix([0, 1, 0])
 w = np.matrix([0, 0, 1])
-frames = []
+frames1 = []
+frames2 = []
 
 escolha = int(input('digite 0 para Descrição espacial ou 1 para parametros DH(modificados): '))
 if escolha == 0:
@@ -109,14 +105,14 @@ if escolha == 0:
     for i in range(1, (quant + 1)):
         print('Sistema {}, insira os dados separados por espaço: '.format(i))
         print('AngX AngY AngZ TransX TransY TransZ bP(x) bP(y) bP(z)')
-        frames.append(Descricao(list(map(float, input().split()))))
+        frames1.append(Descricao(list(map(float, input().split()))))
 
 elif escolha == 1:
     quant = int(input('Quantidade de Sistemas: '))
     for i in range(1, (quant + 1)):
         print('Sistema {}, insira os dados separados por espaço: '.format(i))
         print('alpha a d theta')
-        frames.append(Parametros(list(map(float, input().split()))))
+        frames2.append(Parametros(list(map(float, input().split()))))
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
